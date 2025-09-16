@@ -5,7 +5,7 @@ Barcode
 ## Install
 
 ```bash
-npm install barcode
+npm install @codanux/barcode
 npx cap sync
 ```
 
@@ -13,25 +13,18 @@ npx cap sync
 
 <docgen-index>
 
-* [`echo(...)`](#echo)
+* [`scan(...)`](#scan)
 
 </docgen-index>
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-### echo(...)
+### scan(...)
 
 ```typescript
-echo(options: { value: string; }) => Promise<{ value: string; }>
+scan() => Promise<{ value: string; format: string }>
 ```
 
-| Param         | Type                            |
-| ------------- | ------------------------------- |
-| **`options`** | <code>{ value: string; }</code> |
-
-**Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
-
---------------------
 
 </docgen-api>
