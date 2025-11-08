@@ -3,9 +3,11 @@ package com.mobilkod.barcode;
 import android.app.Activity;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
+import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.FrameLayout;
 
 import androidx.activity.OnBackPressedCallback;
@@ -37,6 +39,8 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
     private BarcodeScanner barcodeScanner;
     private PluginCall savedCall;
     private boolean isProcessing = false;
+    private boolean isFlashOn = false;
+    private Button flashButton;
 
     @PluginMethod
     public void scan(PluginCall call) {
@@ -67,14 +71,39 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.addCallback(this);
 
-        activity.runOnUiThread(() -> {
+       
+       activity.runOnUiThread(() -> {
             FrameLayout layout = new FrameLayout(activity);
             layout.addView(surfaceView);
+
+            // 🔦 Flash Butonu Oluştur
+            flashButton = new Button(activity);
+            flashButton.setText("🔦 Flash");
+            flashButton.setBackgroundColor(0x88000000); // yarı saydam siyah
+            flashButton.setTextColor(0xFFFFFFFF);
+
+            FrameLayout.LayoutParams buttonParams = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+
+            // 🔽 Butonu ekranın en alt ortasına yerleştir
+            buttonParams.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            int bottomMarginDp = 40; // ekrandan biraz yukarıda dursun (örneğin 40dp)
+            float scale = activity.getResources().getDisplayMetrics().density;
+            buttonParams.bottomMargin = (int) (bottomMarginDp * scale + 0.5f);
+
+            layout.addView(flashButton, buttonParams);
+
+            // 🔄 Flash Butonu Tıklama
+            flashButton.setOnClickListener(v -> toggleFlash());
+
             activity.addContentView(layout, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
             ));
         });
+
 
         // Tüm barcode formatlarını destekleyen scanner
         BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
@@ -82,6 +111,26 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
             .build();
 
         barcodeScanner = BarcodeScanning.getClient(options);
+    }
+
+    private void toggleFlash() {
+        if (camera == null) return;
+
+        try {
+            Camera.Parameters params = camera.getParameters();
+
+            if (isFlashOn) {
+                params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                isFlashOn = false;
+            } else {
+                params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                isFlashOn = true;
+            }
+
+            camera.setParameters(params);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -99,6 +148,7 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
                 params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             }
 
+            params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF); // Başlangıçta kapalı
             camera.setParameters(params);
             camera.setPreviewCallback(this);
             camera.startPreview();
@@ -109,12 +159,9 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
         }
     }
 
-
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
-        if (isProcessing) {
-            return; // Önceki tarama bitmeden yeni tarama başlamasın
-        }
+        if (isProcessing) return;
         isProcessing = true;
 
         Camera.Parameters parameters = camera.getParameters();
@@ -145,9 +192,9 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
                             savedCall = null;
                         }
 
-                        isProcessing = false; // Tarama tamamlandı, yeni tarama için aç
+                        isProcessing = false;
                     } else {
-                        isProcessing = false; // Hiç barkod yok, yeniden tarama için aç
+                        isProcessing = false;
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -157,9 +204,10 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
                         savedCall.reject("Barcode scanning failed: " + e.getMessage());
                         savedCall = null;
                     }
-                    isProcessing = false; // Hata olsa da flag'i sıfırla
+                    isProcessing = false;
                 });
     }
+
     private void stopCamera() {
         Activity activity = getActivity();
         activity.runOnUiThread(() -> {
@@ -176,13 +224,17 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
                     barcodeScanner = null;
                 }
 
-                if (surfaceView != null) {
-                    if (surfaceView.getParent() != null) {
-                        ((ViewGroup) surfaceView.getParent()).removeView(surfaceView);
-                    }
-                    surfaceView = null;
-                    surfaceHolder = null;
+                if (surfaceView != null && surfaceView.getParent() != null) {
+                    ((ViewGroup) surfaceView.getParent()).removeView(surfaceView);
                 }
+
+                if (flashButton != null && flashButton.getParent() != null) {
+                    ((ViewGroup) flashButton.getParent()).removeView(flashButton);
+                    flashButton = null;
+                }
+
+                surfaceView = null;
+                surfaceHolder = null;
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -213,13 +265,11 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
                         savedCall = null;
                     }
                 } else {
-                    surfaceView.setEnabled(false);
+                    if (surfaceView != null) surfaceView.setEnabled(false);
                     getActivity().onBackPressed();
-                    surfaceView.setEnabled(true);
+                    if (surfaceView != null) surfaceView.setEnabled(true);
                 }
             }
         });
     }
-
-
 }
