@@ -257,7 +257,7 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
         getActivity().getOnBackPressedDispatcher().addCallback(getActivity(), new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (camera != null) {
+                 if (camera != null) {
                     stopCamera();
 
                     if (savedCall != null && !savedCall.isReleased()) {
@@ -265,9 +265,9 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
                         savedCall = null;
                     }
                 } else {
-                    if (surfaceView != null) surfaceView.setEnabled(false);
-                    getActivity().onBackPressed();
-                    if (surfaceView != null) surfaceView.setEnabled(true);
+                    // disable this callback temporarily to avoid recursion
+                    setEnabled(false);
+                    getActivity().onBackPressedDispatcher().onBackPressed();
                 }
             }
         });
