@@ -267,7 +267,8 @@ public class BarcodePlugin extends Plugin implements SurfaceHolder.Callback, Cam
                 } else {
                     // disable this callback temporarily to avoid recursion
                     setEnabled(false);
-                    getActivity().onBackPressedDispatcher().onBackPressed();
+                    getActivity().getOnBackPressedDispatcher().onBackPressed();
+
                 }
             }
         });
